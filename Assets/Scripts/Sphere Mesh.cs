@@ -4,36 +4,51 @@ using UnityEngine;
 public class SphereMesh : MonoBehaviour
 {
     //Value of B within Triple Integral.
-    public int resolution = 30;
+    public int resolution = 50;
 
     //Value of Radius of the Sphere Mesh Render.
     public float radius = 1f;
 
     //Values used for adjusting Unity's Spring Joint Component.
     public float springStrength = 5000f;
-    public float springDamping = 200f;
+    public float springDamping = 2000f;
 
     //Material used in order to visualize the SpringJoints [Edges]
     public Material lineMaterial;
+    public Material skinMaterial;
+
     //Value used in order to determine the mass [Vertecies]
-    public float vertexMass = 5f;
+    public float vertexMass = 100f;
 
     //Vertex Deformation on Collision.
-    public float deformationFactor = 0.2f;
+    public float deformationFactor = 0.05f;
 
     //"List" Created to keep track of vertecies. 
     private GameObject[,] vertexGrid;
+    private Vector3[,] initialPositions;
 
     //Toggle for Gravity Testing.
-    public bool Gravity = true;
-
+    public bool Gravity = true; 
     //Toggle for Spring Joint Testing.
     public bool springToggle = true;
+    //Toggle for Inner Spring Joint Testing.
+    public bool internalStructer = true;
+
+    //Used for Creation of the Skin Mesh.
+    private Mesh skinMesh;
+    private Vector3[] skinVertices;
+    private int[] skinTriangles;
 
 
     void Start()
     {
         CreateSoftBodySphere();
+    }
+
+    void FixedUpdate()
+    { 
+        StabilizationForce();
+        SkinMeshUpdater();
     }
 
 
@@ -43,10 +58,12 @@ public class SphereMesh : MonoBehaviour
     {
         //Creates a new Game Object in the scene with a name.
         GameObject sphereParent = new GameObject("SoftBodySphere");
+
         vertexGrid = new GameObject[resolution + 1, resolution + 1];
+        initialPositions = new Vector3[resolution + 1, resolution + 1];
 
         //The poles on the sphere (top and bottom) have a cluster of vertecies which can cause potential issues.
-        float poleOffset = 0.1f;
+        float poleOffset = 0.05f;
 
         // List to store all created vertices' positions for distance check
         List<Vector3> vertexPositions = new List<Vector3>();
@@ -96,6 +113,7 @@ public class SphereMesh : MonoBehaviour
 
                 //Stores the vertex in the list.
                 vertexGrid[i, j] = vertex;
+                initialPositions[i, j] = position;
             }
         }
 
@@ -105,8 +123,125 @@ public class SphereMesh : MonoBehaviour
         {
             AddSpringJointsAndVisualize();
         }
+
+        CreateSkinMesh();
     }
 
+    //***FUNCTION FOR CREATING OUTTER LAYER (SKIN) FOR SPHERE***
+    void CreateSkinMesh()
+    {
+        //Creates a New Game Object for the Skin (#1).
+        GameObject skinObject = new GameObject("SoftBodySkin");
+        skinObject.transform.parent = transform;
+
+        //Creates a Mesh Filter and Render for the Skin (#2).
+        MeshFilter meshFilter = skinObject.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = skinObject.AddComponent<MeshRenderer>();
+
+        //Assign a Material to the Mesh Render (#3).
+        meshRenderer.material = skinMaterial;
+
+        //Create a new Mesh (#4).
+        skinMesh = new Mesh();
+        meshFilter.mesh = skinMesh;
+
+        //Get Mapped Out Vertices Information (#5).
+        int rows = vertexGrid.GetLength(0);
+        int cols = vertexGrid.GetLength(1);
+
+
+        //With the Vertices Map Out Triangles (#6).
+        skinVertices = new Vector3[rows * cols];
+        skinTriangles = new int[(rows - 1) * (cols - 1) * 6];
+
+        //Counter for Vertices and Triangles (#7).
+        int vertIndex = 0;
+        int triIndex = 0;
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                //Mapping vertexGrid to skin Vertices (#8).
+                if (vertexGrid[i, j] != null)
+                {
+                    skinVertices[vertIndex] = vertexGrid[i, j].transform.position;
+                }
+                else
+                {
+                    skinVertices[vertIndex] = Vector3.zero;
+                }
+
+
+                //Including ALL, BUT last Row and Col
+                if (i < rows - 1 && j < cols - 1)
+                {
+                    int a = vertIndex;
+                    int b = vertIndex + 1;
+                    int c = vertIndex + cols;
+                    int d = vertIndex + cols + 1;
+
+                    //FIRST TRIANGLE MAP.
+                    skinTriangles[triIndex++] = a;
+                    skinTriangles[triIndex++] = b;
+                    skinTriangles[triIndex++] = c;
+
+                    //SECOND TRIANGLE MAP.
+                    skinTriangles[triIndex++] = b;
+                    skinTriangles[triIndex++] = d;
+                    skinTriangles[triIndex++] = c;
+                }
+
+                vertIndex++;
+            }
+        }
+
+        //Assign the Values to the Skin Mesh (#9).
+        skinMesh.vertices = skinVertices;
+        skinMesh.triangles = skinTriangles;
+
+        //Lighting Fix (#10).
+        skinMesh.RecalculateNormals();
+    }
+
+    void SkinMeshUpdater()
+    {
+        //Null Check.
+        if (skinMesh == null || skinVertices == null) return;
+
+        int vertIndex = 0;
+
+        int rows = vertexGrid.GetLength(0);
+        int cols = vertexGrid.GetLength(1);
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                //If not Null -> Updates the Skin Vertices to match the Vertex Grid.
+                if (vertexGrid[i, j] != null)
+                {
+                    skinVertices[vertIndex] = vertexGrid[i, j].transform.position;
+                }
+
+                vertIndex++;
+
+                if (vertIndex >= skinVertices.Length)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (vertIndex > skinVertices.Length)
+        {
+            return;
+        }
+
+        skinMesh.vertices = skinVertices;
+        skinMesh.RecalculateNormals();
+
+    }
 
     //***FUNCTION USED TO DETERMINE IF A NEWLY CREATED VERTEX IS TOO CLOSE TO AN ALREADY CREATED VERTEX***
     bool IsTooCloseToExistingVertex(Vector3 newPosition, List<Vector3> existingPositions)
@@ -178,32 +313,54 @@ public class SphereMesh : MonoBehaviour
                     continue;
                 }
 
-
                 //RIGHT NEIGHBOR.
                 if (j < cols - 1)
                 {
-                    CreateSpring(vertexA, vertexGrid[i, j + 1]);
+                    GameObject vertexB = vertexGrid[i, j + 1];
+
+                    if (vertexB != null)
+                    {
+                        CreateSpring(vertexA, vertexB);
+                    }
                 }
 
                 //BOTTOM NEIGHBOR.
                 if (i < rows - 1)
                 {
-                    CreateSpring(vertexA, vertexGrid[i + 1, j]);
+                    GameObject vertexB = vertexGrid[i + 1, j];
+
+                    if (vertexB != null)
+                    {
+                        CreateSpring(vertexA, vertexB);
+                    }
                 }
 
                 //DIAGONAL NEIGHBOR.
                 if (i < rows - 1 && j < cols -1)
                 {
-                    CreateSpring(vertexA, vertexGrid[i + 1, j + 1]);
+                    GameObject vertexB = vertexGrid[i + 1, j + 1];
+
+                    if (vertexB != null)
+                    {
+                        CreateSpring(vertexA, vertexB);
+                    }
                 }
 
                 //ANTI-DIAGONAL NEIGHBOR.
                 if (i < rows - 1 && j > 0)
                 {
-                    CreateSpring(vertexA, vertexGrid[i + 1, j - 1]);
+                    GameObject vertexB = vertexGrid[i + 1, j - 1];
+
+                    if (vertexB != null)
+                    {
+                        CreateSpring(vertexA, vertexB);
+                    }
                 }
 
-                AddInternalSprings(vertexA, i, j);
+                if (internalStructer)
+                {
+                    AddInternalSprings(vertexA, i, j);
+                }
             }
         }
     }
@@ -216,9 +373,10 @@ public class SphereMesh : MonoBehaviour
         int rows = vertexGrid.GetLength(0);
         int cols = vertexGrid.GetLength(1);
 
-        for (int di = 2; di < 4; di++)
+        //Internal Spring Range
+        for (int di = 1; di < 3; di++)
         {
-            for (int dj = 2; dj < 4; dj++)
+            for (int dj = 1; dj < 3; dj++)
             {
                 int ni = (i + di) % rows;
                 int nj = (j + dj) % cols;
@@ -286,6 +444,29 @@ public class SphereMesh : MonoBehaviour
         //Continuously Update the line render of the SpringJoints (#6).
         lineObject.AddComponent<SpringLineUpdater>().Initialize(vertexA.transform, vertexB.transform);
     }
+
+
+    void StabilizationForce()
+    {
+        for (int i = 0; i < vertexGrid.GetLength(0); i++)
+        {
+            for (int j = 0; j < vertexGrid.GetLength(1); j++)
+            {
+                GameObject vertex = vertexGrid[i, j];
+                if (vertex == null) continue;
+
+                Rigidbody rb = vertex.GetComponent<Rigidbody>();
+
+                Vector3 currentPosition = vertex.transform.position;
+                Vector3 targetPosition = transform.TransformPoint(initialPositions[i, j]);
+
+                Vector3 restoringForce = (targetPosition - currentPosition) * springStrength;
+
+                rb.AddForce(restoringForce, ForceMode.Force);
+            }
+        }
+    }
+
 
 
     //***UPDATES AND HANDLES COLLISIONS WITH ALL THE VERTECIES***
