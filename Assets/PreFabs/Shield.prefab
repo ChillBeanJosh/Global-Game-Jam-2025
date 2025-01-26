@@ -67,7 +67,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4d7c1b34f650c4f52ba5c37367bfba8c, type: 2}
+  - {fileID: 2100000, guid: 6a58d7e89b2d56a4d8ca87eda48591e1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -103,7 +103,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   myStartPosition: {x: -10, y: 0, z: 0}
   myEndPosition: {x: 10, y: 0, z: 0}
-  speed: 12
+  speed: 11
   foward: 1
 --- !u!54 &472073009780778292
 Rigidbody:
