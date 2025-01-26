@@ -124,7 +124,7 @@ public class SphereMesh : MonoBehaviour
             AddSpringJointsAndVisualize();
         }
 
-        CreateSkinMesh();
+        //CreateSkinMesh();
     }
 
     //***FUNCTION FOR CREATING OUTTER LAYER (SKIN) FOR SPHERE***
