@@ -247,7 +247,7 @@ public class SphereMesh : MonoBehaviour
     bool IsTooCloseToExistingVertex(Vector3 newPosition, List<Vector3> existingPositions)
     {
         //Minimum Distance Between Verteces.
-        float minDistance = 0.1f; 
+        float minDistance = 0.001f; 
 
         foreach (Vector3 existingPosition in existingPositions)
         {
@@ -268,6 +268,9 @@ public class SphereMesh : MonoBehaviour
     {
         //Creates a GameObject with a Mesh Render, then give it TYPE Sphere Collider.
         GameObject vertex = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+        //Colors the vertecies.
+        vertex.GetComponent<Renderer>().material = skinMaterial;
 
         //Sets is position to the given (x,y,z) Coordinates.
         vertex.transform.position = position;

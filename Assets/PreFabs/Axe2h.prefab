@@ -101,8 +101,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b15437344f72a41d79f6b9be456dbb11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 1
-  destroyTime: 1.5
+  speed: 2
+  destroyTime: 1
 --- !u!54 &4587231994097065734
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -111,7 +111,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6011967270252983037}
   serializedVersion: 4
-  m_Mass: 10000
+  m_Mass: 500
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
